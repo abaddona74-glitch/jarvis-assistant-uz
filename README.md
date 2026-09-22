@@ -32,13 +32,15 @@ cd jarvis-assistant-uz
 py -3.12 -m venv .venv
 .venv\Scripts\activate
 
-# 2. Paketlar (webrtcvad kompilyatsiya xatosi bersa: pip install webrtcvad-wheels)
+# 2. Paketlar
 pip install -e .
 
 # 3. Sozlanma
 copy .env.example .env      # ANTHROPIC_API_KEY ni yozing
 copy config\jarvis.example.yaml config\jarvis.yaml
 ```
+
+> `webrtcvad` kompilyatsiya xatosi bersa: `pip install webrtcvad-wheels`
 
 `config\jarvis.yaml` ichida (past quvvatli CPU uchun tavsiya):
 
@@ -89,4 +91,4 @@ Sinov natijasi (i5-4570T, 4 oqim, int8): small model 7.6s audio → 7.1s transkr
 
 ## Litsenziya
 
-Asl loyiha bilan bir xil (MIT). STT modellarining litsenziyalari Hugging Face sahifalarida ko'rsatilgan.
+MIT — batafsil [LICENSE](LICENSE) faylida. STT modellarining litsenziyalari Hugging Face sahifalarida ko'rsatilgan.
