@@ -30,6 +30,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Bepul miya (Google AI Studio kaliti bilan)
+gemini = ["google-genai>=1.0"]
 # Lokal (internetsiz) STT — Apple Silicon uchun tez
 local-stt = ["mlx-whisper>=0.4.0"]
 # Lokal STT — Windows/Linux CPU uchun (o'zbekcha CT2 modellar bilan)

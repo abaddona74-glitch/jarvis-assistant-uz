@@ -79,14 +79,28 @@ class Jarvis:
         self.memory = Memory(config.memory_path)
         self.agenda = Agenda(config.memory_path)
         self.gate = SafetyGate(config=config, bus=self.bus)
-        self.brain = Brain(
-            config=config,
-            bus=self.bus,
-            memory=self.memory,
-            agenda=self.agenda,
-            gate=self.gate,
-            announce=self._speak,
-        )
+        # Miya provayderi: "claude" (Agent SDK, kalit/obuna) yoki "gemini"
+        # (Google AI Studio kaliti — bepul).
+        if str(config.get("brain.provider", "claude")).lower() == "gemini":
+            from .brain.gemini_agent import GeminiBrain
+
+            self.brain: Any = GeminiBrain(
+                config=config,
+                bus=self.bus,
+                memory=self.memory,
+                agenda=self.agenda,
+                gate=self.gate,
+                announce=self._speak,
+            )
+        else:
+            self.brain = Brain(
+                config=config,
+                bus=self.bus,
+                memory=self.memory,
+                agenda=self.agenda,
+                gate=self.gate,
+                announce=self._speak,
+            )
 
         # Rejalashtiruvchi vaqti kelgan eslatmalarni shu navbatga qo'yadi;
         # asosiy sikl uni bo'sh bo'lganda bo'shatadi.
