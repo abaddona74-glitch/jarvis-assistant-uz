@@ -523,9 +523,11 @@ class Jarvis:
 
             if item.notify:
                 try:
-                    from .tools import macos
-
-                    await macos.notify("Jarvis", item.text[:200])
+                    if sys.platform == "darwin":
+                        from .tools import macos as platform_tools
+                    else:
+                        from .tools import windows as platform_tools
+                    await platform_tools.notify("Jarvis", item.text[:200])
                 except Exception:
                     log.debug("Bildirishnoma ko'rsatilmadi", exc_info=True)
 
@@ -647,7 +649,10 @@ class Jarvis:
         Eski daraja saqlanadi va tinglash tugagach qaytariladi — hatto xato
         bo'lsa ham, aks holda musiqa jim bo'lib qolardi.
         """
-        if not self._duck_enabled:
+        if not self._duck_enabled or sys.platform != "darwin":
+            # Ovoz pasaytirish hozircha faqat macOS'da amalga oshiriladi
+            # (Windows'da absolyut darajani o'qish/yozish uchun qo'shimcha
+            # COM qatlami kerak). Windows'da tinglash shunday davom etadi.
             yield
             return
 

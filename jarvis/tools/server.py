@@ -13,13 +13,24 @@ from __future__ import annotations
 
 import json
 import logging
+import sys
 from typing import Any, Callable
 
 from claude_agent_sdk import ToolAnnotations, create_sdk_mcp_server, tool
 
 from ..brain.agenda import Agenda, format_when, parse_when
 from ..brain.memory import Memory
-from . import channels, macos, media
+
+from . import channels, media
+
+# Platforma moduli: macOS'da AppleScript, Windows'da PowerShell/win32.
+# Interfeys bir xil (duck-typing) — open_app, open_url, notify, frontmost_app,
+# playpause... Istisno klassi ham xuddi shu nomda (MacOsError), shuning uchun
+# `except MacOsError` bloklari ikkala platformada ishlaydi.
+if sys.platform == "darwin":
+    from . import macos as platform
+else:
+    from . import windows as platform
 
 log = logging.getLogger("jarvis.tools")
 
@@ -34,6 +45,7 @@ READ_ONLY_TOOLS = [
     "list_projects", "list_tasks", "daily_brief",
     "list_contacts", "find_contact",
     "frontmost_app", "list_shortcuts",
+    "open_url",
 ]
 
 
@@ -287,25 +299,30 @@ def _system_tools(agenda: Agenda) -> list[Any]:
     )
     async def notify(args: dict[str, Any]) -> dict[str, Any]:
         try:
-            await macos.notify(str(args.get("sarlavha", "Jarvis")), str(args.get("matn", "")))
+            await platform.notify(str(args.get("sarlavha", "Jarvis")), str(args.get("matn", "")))
             return _ok("Bildirishnoma ko'rsatildi")
-        except macos.MacOsError as exc:
+        except platform.MacOsError as exc:
             return _fail(str(exc))
 
-    @tool("open_app", "Kompyuterda ilovani ochadi. Masalan: 'Safari', 'Notes'.", {"nom": str})
+    @tool("open_app", "Kompyuterda ilovani ochadi. Masalan: 'chrome', 'notepad', 'calc'.", {"nom": str})
     async def open_app(args: dict[str, Any]) -> dict[str, Any]:
         try:
-            await macos.open_app(str(args.get("nom", "")))
+            await platform.open_app(str(args.get("nom", "")))
             return _ok(f"{args.get('nom')} ochildi")
-        except macos.MacOsError as exc:
+        except platform.MacOsError as exc:
             return _fail(str(exc))
 
-    @tool("open_url", "Havolani brauzerda ochadi.", {"havola": str})
+    @tool(
+        "open_url",
+        "Havolani standart brauzerda ochadi. «Google och», «youtube.com och» kabi "
+        "buyruqlar uchun shu ishlatiladi — masalan havola='https://www.google.com'.",
+        {"havola": str},
+    )
     async def open_url(args: dict[str, Any]) -> dict[str, Any]:
         try:
-            await macos.open_url(str(args.get("havola", "")))
+            await platform.open_url(str(args.get("havola", "")))
             return _ok("Havola ochildi")
-        except macos.MacOsError as exc:
+        except platform.MacOsError as exc:
             return _fail(str(exc))
 
     @tool(
@@ -320,8 +337,8 @@ def _system_tools(agenda: Agenda) -> list[Any]:
         start = int(args.get("sekund") or 0)
         try:
             video_id, title = await media.find_video(query)
-            await macos.open_url(media.watch_url(video_id, start))
-        except (media.MediaError, macos.MacOsError) as exc:
+            await platform.open_url(media.watch_url(video_id, start))
+        except (media.MediaError, platform.MacOsError) as exc:
             return _fail(str(exc))
 
         what = title or query
@@ -340,20 +357,20 @@ def _system_tools(agenda: Agenda) -> list[Any]:
     async def playpause(args: dict[str, Any]) -> dict[str, Any]:
         try:
             await media.playpause()
-        except (media.MediaError, macos.MacOsError) as exc:
+        except (media.MediaError, platform.MacOsError) as exc:
             return _fail(str(exc))
         return _ok("Bajarildi")
 
     @tool("frontmost_app", "Hozir qaysi ilova faol ekanini aytadi.", {}, annotations=READ_ONLY)
     async def frontmost_app(args: dict[str, Any]) -> dict[str, Any]:
         try:
-            return _ok(await macos.frontmost_app())
-        except macos.MacOsError as exc:
+            return _ok(await platform.frontmost_app())
+        except platform.MacOsError as exc:
             return _fail(str(exc))
 
     @tool(
         "send_message",
-        "Messages ilovasi orqali SMS/iMessage yuboradi. `kimga` — saqlangan aloqa ismi, "
+        "SMS/iMessage yuboradi (faqat macOS'da ishlaydi). `kimga` — saqlangan aloqa ismi, "
         "telefon raqami yoki Apple ID. Ism berilsa, aloqalardan raqami topiladi.",
         {"kimga": str, "matn": str},
     )
@@ -374,9 +391,9 @@ def _system_tools(agenda: Agenda) -> list[Any]:
             target = contact["telefon"]
 
         try:
-            await macos.send_imessage(target, text)
+            await platform.send_imessage(target, text)
             return _ok(f"Xabar yuborildi: {target}")
-        except macos.MacOsError as exc:
+        except platform.MacOsError as exc:
             return _fail(str(exc))
 
     @tool(
@@ -416,9 +433,9 @@ def _system_tools(agenda: Agenda) -> list[Any]:
     )
     async def list_shortcuts(args: dict[str, Any]) -> dict[str, Any]:
         try:
-            names = await macos.list_shortcuts()
+            names = await platform.list_shortcuts()
             return _ok("\n".join(names) if names else "Qisqa yo'llar topilmadi")
-        except macos.MacOsError as exc:
+        except platform.MacOsError as exc:
             return _fail(str(exc))
 
     @tool(
@@ -429,11 +446,11 @@ def _system_tools(agenda: Agenda) -> list[Any]:
     )
     async def run_shortcut(args: dict[str, Any]) -> dict[str, Any]:
         try:
-            output = await macos.run_shortcut(
+            output = await platform.run_shortcut(
                 str(args.get("nom", "")), str(args.get("kirish") or "")
             )
             return _ok(output or "Qisqa yo'l bajarildi")
-        except macos.MacOsError as exc:
+        except platform.MacOsError as exc:
             return _fail(str(exc))
 
     @tool(

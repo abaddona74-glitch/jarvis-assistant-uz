@@ -15,9 +15,16 @@ from __future__ import annotations
 
 import logging
 import re
+import sys
 from urllib.parse import quote_plus
 
 log = logging.getLogger("jarvis.tools.media")
+
+# Platforma moduli (server.py bilan bir xil tanlov).
+if sys.platform == "darwin":
+    from . import macos as platform
+else:
+    from . import windows as platform
 
 
 class MediaError(RuntimeError):
@@ -136,6 +143,8 @@ end tell
 
 async def close_youtube() -> int:
     """YouTube ochilgan barcha varaqlarni yopadi. Nechtasi yopilganini qaytaradi."""
+    if sys.platform != "darwin":
+        raise MediaError("Varaq bo'yicha yopish hozircha faqat macOS'da ishlaydi")
     from . import macos
 
     total = 0
@@ -165,10 +174,15 @@ async def _is_running(app_name: str) -> bool:
 async def playpause() -> None:
     """Ijroni to'xtatadi yoki davom ettiradi.
 
-    YouTube probel tugmasi bilan boshqariladi, shuning uchun avval brauzerni
-    old planga chiqaramiz. Media tugmasini yuborish ham mumkin edi, lekin u
-    boshqa pleyerlarga (Music, Spotify) tegib ketardi.
+    Windows'da media tugmasi yuboriladi — brauzer old planda bo'lmasa ham ishlaydi.
+    macOS'da esa YouTube probel tugmasi bilan boshqariladi, shuning uchun avval
+    brauzerni old planga chiqaramiz. Media tugmasini yuborish ham mumkin edi,
+    lekin u boshqa pleyerlarga (Music, Spotify) tegib ketardi.
     """
+    if sys.platform != "darwin":
+        await platform.playpause()
+        return
+
     from . import macos
 
     for name in BROWSERS:
