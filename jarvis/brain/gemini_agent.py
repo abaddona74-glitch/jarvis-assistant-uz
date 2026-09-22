@@ -33,7 +33,7 @@ from .prompts import build_system_prompt
 
 log = logging.getLogger("jarvis.brain.gemini")
 
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-3.6-flash"
 
 
 class GeminiBrain:
