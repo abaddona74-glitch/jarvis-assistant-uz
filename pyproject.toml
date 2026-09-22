@@ -23,11 +23,14 @@ dependencies = [
     "pyyaml>=6.0",
     "python-dotenv>=1.0",
     "platformdirs>=4.0",
+    "faster-whisper>=1.0.0",
 ]
 
 [project.optional-dependencies]
 # Lokal (internetsiz) STT — Apple Silicon uchun tez
 local-stt = ["mlx-whisper>=0.4.0"]
+# Lokal STT — Windows/Linux CPU uchun (o'zbekcha CT2 modellar bilan)
+fw-stt = ["faster-whisper>=1.0.0"]
 porcupine = ["pvporcupine>=3.0.0"]
 dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "ruff>=0.6"]
 

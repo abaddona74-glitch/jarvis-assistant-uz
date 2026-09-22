@@ -19,3 +19,6 @@ audit.log
 node_modules/
 ui/dist/
 .DS_Store
+
+# Ish vaqtidagi loglar
+run.log

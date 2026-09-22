@@ -123,6 +123,59 @@ class MohirStt(SttProvider):
         await self._client.aclose()
 
 
+class FasterWhisperUzStt(SttProvider):
+    """Lokal faster-whisper — CTranslate2 formatidagi Whisper.
+
+    Windows va Linux'da ham ishlaydi (mlx faqat Apple Silicon'da), CPU'da int8
+    kvantizatsiya bilan tez. O'zbekchaga o'rgatilgan tayyor CT2 modellar:
+      * hostmepanda/whisper-large-v3-turbo-uzbek-ct2  — sifat yaxshi, ~800 MB;
+      * maqsudxo1ja/uz-whisper-small-stt-v2           — yengil, ~250 MB.
+    Birinchi ishga tushirishda model HuggingFace'dan yuklab olinadi.
+    """
+
+    def __init__(self, model: str = "hostmepanda/whisper-large-v3-turbo-uzbek-ct2",
+                 language: str = "uz", device: str = "cpu",
+                 compute_type: str = "int8", beam_size: int = 1,
+                 cpu_threads: int = 2) -> None:
+        self._model_name = model
+        self._language = language
+        self._device = device
+        self._compute_type = compute_type
+        self._beam_size = beam_size
+        self._cpu_threads = cpu_threads
+        self._model: object | None = None
+
+    def _get_model(self):
+        # Modelni yuklash bir marta — keyingi chaqiruvlarda keshdan ishlaydi.
+        if self._model is None:
+            from faster_whisper import WhisperModel
+
+            self._model = WhisperModel(
+                self._model_name,
+                device=self._device,
+                compute_type=self._compute_type,
+                cpu_threads=self._cpu_threads,
+            )
+        return self._model
+
+    async def transcribe(self, audio: np.ndarray, sample_rate: int) -> str:
+        if sample_rate != 16000:
+            raise ValueError(f"faster-whisper uchun 16 kHz kerak, {sample_rate} Hz berildi")
+
+        samples = audio.astype(np.float32) / 32768.0
+
+        def run() -> str:
+            model = self._get_model()
+            segments, _info = model.transcribe(
+                samples, language=self._language, beam_size=self._beam_size,
+                vad_filter=True,
+            )
+            return "".join(segment.text for segment in segments).strip()
+
+        # Model CPU'ni bloklaydi — event loop'ni band qilmaymiz.
+        return await asyncio.to_thread(run)
+
+
 class WhisperLocalStt(SttProvider):
     """Lokal Whisper (MLX orqali). Internet kerak emas, lekin birinchi ishga tushish sekin."""
 
@@ -161,6 +214,15 @@ def build_stt(cfg: dict) -> SttProvider:
         return WhisperLocalStt(
             model=str(cfg.get("model", "mlx-community/whisper-large-v3-turbo")),
             language=language,
+        )
+    if provider == "faster_whisper_uz":
+        return FasterWhisperUzStt(
+            model=str(cfg.get("model", "hostmepanda/whisper-large-v3-turbo-uzbek-ct2")),
+            language=language,
+            device=str(cfg.get("device", "cpu")),
+            compute_type=str(cfg.get("compute_type", "int8")),
+            beam_size=int(cfg.get("beam_size", 1)),
+            cpu_threads=int(cfg.get("cpu_threads", 2)),
         )
     raise ValueError(f"Noma'lum STT provayderi: {provider}")
 

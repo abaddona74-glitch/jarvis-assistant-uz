@@ -101,10 +101,18 @@ conversation:
 # ElevenLabs ovozi tabiiyroq, lekin inglizcha aksent bilan gapiradi.
 voice:
   stt:
-    provider: "elevenlabs"         # elevenlabs | mohir | whisper_local
+    provider: "faster_whisper_uz"    # faster_whisper_uz | elevenlabs | mohir | whisper_local
     language: "uz"
-    # whisper_local uchun:
-    model: "mlx-community/whisper-large-v3-turbo"
+    # faster_whisper_uz uchun (lokal, kalitsiz; model birinchi ishga tushishda
+    # HuggingFace'dan yuklab olinadi):
+    model: "hostmepanda/whisper-large-v3-turbo-uzbek-ct2"
+    device: "cpu"
+    compute_type: "int8"
+    beam_size: 1                     # eng tez rejim; aniqlik kerak bo'lsa 5
+    cpu_threads: 2                   # jismoniy yadrolar soni
+    # Yengilroq model (kuchsiz PC uchun): maqsudxo1ja/uz-whisper-small-stt-v2
+    # whisper_local uchun (faqat Mac):
+    # model: "mlx-community/whisper-large-v3-turbo"
 
   tts:
     provider: "elevenlabs"         # elevenlabs | azure | mohir | macos

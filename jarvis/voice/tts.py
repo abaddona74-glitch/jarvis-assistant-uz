@@ -235,6 +235,58 @@ class MohirTts(TtsProvider):
         await self._client.aclose()
 
 
+class WindowsSapiTts(TtsProvider):
+    """Windows SAPI — PowerShell System.Speech orqali. Kalitlarsiz lokal ovoz.
+
+    O'zbek ovozi yo'q (standart ovoz o'zbekcha matnni talaffuz qiladi), lekin
+    javob eshitilib turadi va xuddi macOS `say` kabi sinov uchun qulay.
+    """
+
+    def __init__(self, voice: str = "", speed: float = 1.0) -> None:
+        self.sample_rate = 22050
+        self._voice = voice
+        self._rate = max(-10, min(10, round((speed - 1.0) * 10)))
+
+    async def stream(self, text: str) -> AsyncIterator[np.ndarray]:
+        import os
+        import tempfile
+
+        def run() -> bytes:
+            # Matn va natija vaqtinchalik fayllarda — PowerShell satriga
+            # joylashtirganda qo'shtirnoq/apostrof muammolari chiqmasligi uchun.
+            wav_path = os.path.join(tempfile.gettempdir(), f"jarvis_tts_{os.getpid()}.wav")
+            txt_path = os.path.join(tempfile.gettempdir(), f"jarvis_tts_{os.getpid()}.txt")
+            with open(txt_path, "w", encoding="utf-8-sig") as handle:
+                handle.write(text)
+
+            select = f"$s.SelectVoice('{self._voice}'); " if self._voice else ""
+            script = (
+                "Add-Type -AssemblyName System.Speech; "
+                "$s = New-Object System.Speech.Synthesis.SpeechSynthesizer; "
+                f"$s.Rate = {self._rate}; {select}"
+                f"$s.SetOutputToWaveFile('{wav_path}'); "
+                f"$s.Speak([System.IO.File]::ReadAllText('{txt_path}')); "
+                "$s.Dispose()"
+            )
+            try:
+                proc = subprocess.run(
+                    ["powershell", "-NoProfile", "-Command", script],
+                    capture_output=True, text=True, timeout=120,
+                )
+                if proc.returncode != 0:
+                    raise RuntimeError(f"SAPI TTS xato: {(proc.stderr or '').strip()[:200]}")
+                with open(wav_path, "rb") as handle:
+                    return handle.read()
+            finally:
+                for path in (wav_path, txt_path):
+                    try:
+                        os.unlink(path)
+                    except OSError:
+                        pass
+
+        yield _pcm_from_wav(await asyncio.to_thread(run))
+
+
 class MacosSayTts(TtsProvider):
     """macOS `say` — o'zbek ovozi yo'q, lekin kalitlarsiz darhol sinab ko'rish uchun qulay."""
 
@@ -376,4 +428,6 @@ def build_tts(cfg: dict) -> TtsProvider:
             voice=voice if voice and not voice.startswith("uz-") else _default_voice("macos", gender),
             speed=speed,
         )
+    if provider == "windows":
+        return WindowsSapiTts(voice=voice, speed=speed)
     raise ValueError(f"Noma'lum TTS provayderi: {provider}")
