@@ -19,6 +19,9 @@ dependencies = [
     # Tarmoq
     "httpx>=0.27",
     "websockets>=12.0",
+    # TTS (edge) — bepul neyron ovozlar, kalit talab qilmaydi
+    "edge-tts>=7.0",
+    "soundfile>=0.12",
     # Konfiguratsiya
     "pyyaml>=6.0",
     "python-dotenv>=1.0",

@@ -115,14 +115,18 @@ voice:
     # model: "mlx-community/whisper-large-v3-turbo"
 
   tts:
-    provider: "elevenlabs"         # elevenlabs | azure | mohir | macos
+    provider: "edge"               # edge | elevenlabs | azure | mohir | windows | macos
     gender: "female"               # female | male — zaxira ovoz shunga qarab tanlanadi
+    # edge (tavsiya): bepul neyron ovoz, kalit talab qilmaydi (internet kerak).
+    # O'zbekcha ovozlar: uz-UZ-MadinaNeural (ayol) | uz-UZ-SardorNeural (erkak).
+    # Boshqa tillar uchun ro'yxat: edge-tts --list-voices
+    voice: ""
+    speed: 1.0
     # ElevenLabs ovoz nomi yoki 20 belgili ID. Har bir hisobdagi ovoz to'plami
     # boshqacha — bu nom topilmasa, Jarvis yuqoridagi jinsga mos ovozga o'tadi
     # va `jarvis doctor` mavjud ovozlar ro'yxatini ko'rsatadi.
-    voice: "Aria"
     model: "eleven_multilingual_v2"
-    speed: 1.0
+    # windows uchun: SAPI ovozlari (o'zbek ovozi yo'q — matnni harflab o'qiydi!)
     # azure uchun: uz-UZ-MadinaNeural (ayol) | uz-UZ-SardorNeural (erkak)
 
 brain:

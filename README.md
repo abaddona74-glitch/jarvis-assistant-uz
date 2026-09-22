@@ -7,7 +7,7 @@ Bu loyiha [kamolbeek/jarvis-assistant](https://github.com/kamolbeek/jarvis-assis
 | O'zgarish | Tafsilot |
 |---|---|
 | 🇺🇿 **Lokal o'zbekcha STT** | Yangi `faster_whisper_uz` provayderi — faster-whisper (CTranslate2) bilan o'zbekchaga fine-tune qilingan Whisper ishlaydi. Internetsiz, kalitsiz, bepul. |
-| 🔊 **Windows TTS** | Yangi `windows` provayderi — SAPI (PowerShell) orqali lokal ovoz chiqarish. Kalitsiz, bepul. |
+| 🔊 **O'zbekcha TTS** | Yangi `edge` provayderi — Microsoft Edge TTS orqali haqiqiy o'zbekcha neyron ovoz (`uz-UZ-MadinaNeural`/`uz-UZ-SardorNeural`). Kalitsiz, bepul (faqat internet). Qo'shimcha: lokal `windows` SAPI provayderi ham bor. |
 | 🪟 **Windows'ga moslash** | Apple'ga bog'liq `mlx-whisper` o'rniga CPU'da ishlaydigan faster-whisper. |
 
 Asl loyiha haqida: macOS'ga qaratilgan Jarvis — Claude Agent SDK bilan miya, openWakeWord bilan uyg'otuvchi so'z, Telegram uslubidagi web UI, xotira, rejalashtiruvchi va xavfsizlik darvozasi.
@@ -15,7 +15,7 @@ Asl loyiha haqida: macOS'ga qaratilgan Jarvis — Claude Agent SDK bilan miya, o
 ## Bizning variant nima beradi?
 
 - **Eshitish (STT)**: to'liq lokal va tekin — [maqsudxo1ja/uz-whisper-small-stt-v2](https://huggingface.co/maqsudxo1ja/uz-whisper-small-stt-v2) (250 MB int8, o'rtacha PC'da real vaqtga yaqin) yoki kattaroq [hostmepanda/whisper-large-v3-turbo-uzbek-ct2](https://huggingface.co/hostmepanda/whisper-large-v3-turbo-uzbek-ct2) (~800 MB, sifatliroq, biroz sekinroq).
-- **Gapirish (TTS)**: Windows SAPI (lokal). Haqiqiy o'zbekcha ovoz uchun Azure F0 bepul tarif tavsiya etiladi (`uz-UZ-SardorNeural`, oyiga 500 000 belgi).
+- **Gapirish (TTS)**: Microsoft Edge TTS — haqiqiy o'zbekcha neyron ovoz, kalit va hisob talab qilmaydi (faqat internet). To'liq oflayn kerak bo'lsa: Windows SAPI (o'zbek ovozi yo'q) yoki Azure F0 bepul tarif (kalit kerak).
 - **Miya (LLM)**: Claude Agent SDK — ANTHROPIC_API_KEY yoki Claude Pro/Max obunasi (asl loyiha shartligicha).
 
 > ⚠️ STT+TTS bepul, lekin "miya" pullik — bu asl loyihaning arxitekturasi.
@@ -59,7 +59,9 @@ voice:
     beam_size: 1
     cpu_threads: 4
   tts:
-    provider: "windows"    # lokal SAPI; o'zbekcha ovoz uchun Azure F0: "azure"
+    provider: "edge"       # haqiqiy o'zbekcha neyron ovoz, kalitsiz
+    gender: "female"       # erkak ovoz uchun: "male" (SardorNeural)
+    speed: 1.0
 ```
 
 ### Ishga tushirish
@@ -85,7 +87,7 @@ Sinov natijasi (i5-4570T, 4 oqim, int8): small model 7.6s audio → 7.1s transkr
 | Qism | Holat |
 |---|---|
 | Wake word, audio, xotira, scheduler, web UI, xavfsizlik | ✅ |
-| Lokal o'zbekcha STT, Windows TTS | ✅ (bu fork qo'shgan) |
+| Lokal o'zbekcha STT, Edge TTS (o'zbekcha ovoz) | ✅ (bu fork qo'shgan) |
 | Miya (Claude) | ✅ (kalit/obuna kerak) |
 | macOS ilovalar, iMessage, Shortcuts, `say` | ❌ macOS'gina |
 

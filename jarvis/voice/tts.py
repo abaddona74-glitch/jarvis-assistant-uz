@@ -4,9 +4,12 @@ Barcha provayderlar xom PCM qaytaradi (mp3 emas) — shuning uchun `ffmpeg` kera
 va ijro paytida ovoz darajasini o'lchab, orb animatsiyasini ovozga moslashtirish mumkin.
 
 O'zbek tili uchun variantlar:
-  * elevenlabs — `eleven_multilingual_v2`, o'zbek tilini qo'llaydi;
-  * azure      — `uz-UZ-SardorNeural` / `uz-UZ-MadinaNeural`, aynan o'zbekcha neyron ovozlar;
+  * edge        — Microsoft Edge TTS, `uz-UZ-SardorNeural` / `uz-UZ-MadinaNeural`.
+                  Kalit va hisob talab qilmaydi (faqat internet) — eng tekin
+                  haqiqiy o'zbekcha neyron ovoz;
+  * azure      — `uz-UZ-SardorNeural` / `uz-UZ-MadinaNeural`, kalit kerak;
   * mohir      — Mohir.ai, mahalliy provayder;
+  * windows    — tizim SAPI ovozlari; o'zbek ovozi yo'q, matnni harflab o'qiydi;
   * macos      — tizim `say` buyrug'i; o'zbek ovozi yo'q, faqat sinov uchun.
 """
 
@@ -235,6 +238,37 @@ class MohirTts(TtsProvider):
         await self._client.aclose()
 
 
+class EdgeTts(TtsProvider):
+    """Microsoft Edge TTS — bepul neyron ovozlar, kalit va hisob talab qilmaydi.
+
+    Edge brauzerining matn o'qish xizmatidan foydalanadi (internet kerak, lekin
+    API kalit emas). O'zbekcha haqiqiy neyron ovozlari bor — SAPI'dagi kabi
+    "harflab o'qish" muammosi yo'q.
+    """
+
+    def __init__(self, voice: str = "uz-UZ-SardorNeural", speed: float = 1.0) -> None:
+        self.sample_rate = 24000
+        self._voice = voice
+        self._speed = speed
+
+    async def stream(self, text: str) -> AsyncIterator[np.ndarray]:
+        import io
+
+        import edge_tts
+        import soundfile as sf
+
+        # Tezlikni Edge'ning foiz formatiga aylantiramiz: 1.0 -> +0%, 1.2 -> +20%
+        rate = f"{(self._speed - 1.0) * 100:+.0f}%"
+        communicate = edge_tts.Communicate(text, self._voice, rate=rate)
+
+        mp3 = io.BytesIO()
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                mp3.write(chunk["data"])
+        data, _ = sf.read(io.BytesIO(mp3.getvalue()), dtype="int16")
+        yield data
+
+
 class WindowsSapiTts(TtsProvider):
     """Windows SAPI — PowerShell System.Speech orqali. Kalitlarsiz lokal ovoz.
 
@@ -395,6 +429,7 @@ class Speaker:
 # Har bir provayderning standart ovozi jinsga qarab. `voice.tts.gender`
 # sozlamada nom ko'rsatilmagan yoki topilmagan hollarda tanlovni boshqaradi.
 DEFAULT_VOICES: dict[str, dict[str, str]] = {
+    "edge": {"female": "uz-UZ-MadinaNeural", "male": "uz-UZ-SardorNeural"},
     "azure": {"female": "uz-UZ-MadinaNeural", "male": "uz-UZ-SardorNeural"},
     # Mohir.ai'da erkak ovozining nomini tasdiqlaganim yo'q — sozlamada
     # `voice.tts.voice` ga yozib qo'yish kerak.
@@ -417,6 +452,10 @@ def build_tts(cfg: dict) -> TtsProvider:
     if provider == "elevenlabs":
         return ElevenLabsTts(voice=voice or "Aria", gender=gender, speed=speed,
                              model=str(cfg.get("model", "eleven_multilingual_v2")))
+    if provider == "edge":
+        # Edge ovozlari `uz-UZ-...` ko'rinishida; boshqa nom kelsa e'tibor bermaymiz.
+        return EdgeTts(voice=voice if voice.startswith("uz-") else _default_voice("edge", gender),
+                       speed=speed)
     if provider == "azure":
         # Azure ovozlari `uz-UZ-...` ko'rinishida; boshqa nom kelsa e'tibor bermaymiz.
         return AzureTts(voice=voice if voice.startswith("uz-") else _default_voice("azure", gender),
